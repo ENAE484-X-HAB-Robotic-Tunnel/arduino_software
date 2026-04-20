@@ -1,28 +1,37 @@
 #include <Arduino.h>
 #include <AccelStepper.h>
 #include <MultiStepper.h>
-/*
-	1.8 deg step angle
-*/
-// put function declarations here:
-#define PUL 11
-#define DIR 13
 
-AccelStepper stepper(AccelStepper::DRIVER, PUL, DIR);
-unsigned long startTime;
-unsigned long curTime;
-int stopped = 0;
+#define PUL1 11
+#define DIR1c 13
 
-void serialParse(int&);
+#define PUL2 5
+#define DIR2 7
 
+// 200 steps, 10x1 reduction -> 2000 effective steps
+// 5.5555 effective steps per degree
+
+#define STEPTOANGLE 5.55555
+
+AccelStepper stepper1(AccelStepper::DRIVER, PUL1, DIR2);
+AccelStepper stepper2(AccelStepper::DRIVER, PUL2, DIR2);
+
+MultiStepper steppers;
+
+uint32_t startTime;
+uint32_t curTime;
+uint8_t stopped = 0;
 
 void setup() {
 	// put your setup code here, to run once:
-	Serial.begin(9600);
+	Serial.begin(115200);
 
-	stepper.setMaxSpeed(5000);
-	stepper.setAcceleration(20);
-	stepper.setSpeed(2000);
+	stepper1.setMaxSpeed(500);
+	stepper2.setMaxSpeed(500);
+
+	steppers.addStepper(stepper1);
+	steppers.addStepper(stepper2);
+
 	startTime = millis();
 }
 
@@ -30,28 +39,32 @@ void setup() {
 
 void loop() {
 	// put your main code here, to run repeatedly:
-	int step_count;
-	if (Serial.available() > 0){
-		serialParse(step_count);
-		Serial.println(step_count);
-	}
+	// if (Serial.available() > 0){
+	// 	serialParse(step_count);
+	// 	Serial.println(step_count);
+	// }
 
-	curTime = millis();
+	long positions[2];
+	positions[0] = STEPTOANGLE * 360; // gives two total rotations
+	positions[1] = STEPTOANGLE * 720; // gives 4 total rotations
 
-	if ((curTime - startTime) <= 10000){
-		stepper.runSpeed();
-	}
-	else if (stopped == 0){
-		stepper.stop();
-		Serial.println("Stopped");
-		stopped = 1;
-	}
+	steppers.moveTo(positions);
+	steppers.runSpeedToPosition();
+
+	delay(1000);
+	positions[0] = -STEPTOANGLE * 360;
+	positions[1] = -STEPTOANGLE * 720;
+
+	steppers.moveTo(positions);
+	steppers.runSpeedToPosition();
+
+	delay(1000);
 }
 
 // put function definitions here:
-void serialParse(int &step_count) {
-	step_count = Serial.read();
-}
+// void serialParse(int &step_count) {
+// 	step_count = Serial.read();
+// }
 
 
 // void setup()
