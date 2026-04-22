@@ -2,64 +2,88 @@
 #include <AccelStepper.h>
 #include <MultiStepper.h>
 
-#define PUL1 11
-#define DIR1c 13
+#define NUM_STEPPERS 6
+#define STEPTOANGLE 5.55555 // 200 steps, 10x1 reduction -> 2000 effective steps; 5.5555 effective steps per degree
 
-#define PUL2 5
-#define DIR2 7
+const int stepPins[NUM_STEPPERS] = {11, 5, -1, -1, -1, -1}; // FILL ME IN !!!!!
+const int dirPins[NUM_STEPPERS]  = {13, 7, -1, -1, -1, -1}; // FILL ME IN !!!!!
 
-// 200 steps, 10x1 reduction -> 2000 effective steps
-// 5.5555 effective steps per degree
+AccelStepper steppersList[NUM_STEPPERS] = {
+  AccelStepper(AccelStepper::DRIVER, stepPins[0], dirPins[0]),
+  AccelStepper(AccelStepper::DRIVER, stepPins[1], dirPins[1]),
+  AccelStepper(AccelStepper::DRIVER, stepPins[2], dirPins[2]),
+  AccelStepper(AccelStepper::DRIVER, stepPins[3], dirPins[3]),
+  AccelStepper(AccelStepper::DRIVER, stepPins[4], dirPins[4]),
+  AccelStepper(AccelStepper::DRIVER, stepPins[5], dirPins[5])
+};
 
-#define STEPTOANGLE 5.55555
+MultiStepper multi;
 
-AccelStepper stepper1(AccelStepper::DRIVER, PUL1, DIR2);
-AccelStepper stepper2(AccelStepper::DRIVER, PUL2, DIR2);
+long positions[NUM_STEPPERS];
+void anglesToSteps(float angles[], long positions[]) {
+  for (int i = 0; i < NUM_STEPPERS; i++) {
+    positions[i] = angles[i] * STEPTOANGLE;
+	// positions[i] = steppersList[i].currentPosition() + angles[i] * STEPTOANGLE; // Relative Motion ---
+  }
+}
 
-MultiStepper steppers;
+// uint32_t startTime;
+// uint32_t curTime;
+// uint8_t stopped = 0;
 
-uint32_t startTime;
-uint32_t curTime;
-uint8_t stopped = 0;
 
 void setup() {
-	// put your setup code here, to run once:
 	Serial.begin(115200);
 
-	stepper1.setMaxSpeed(500);
-	stepper2.setMaxSpeed(500);
+	for (int i = 0; i < NUM_STEPPERS; i++) {
+		steppersList[i].setMaxSpeed(500);
+		multi.addStepper(steppersList[i]);
+	}
 
-	steppers.addStepper(stepper1);
-	steppers.addStepper(stepper2);
-
-	startTime = millis();
+	// startTime = millis();
 }
-
-
 
 void loop() {
-	// put your main code here, to run repeatedly:
-	// if (Serial.available() > 0){
-	// 	serialParse(step_count);
-	// 	Serial.println(step_count);
+
+	// Possibly jerkey - No acc/dec
+	float targetAngles[NUM_STEPPERS] = {0, 0, 0, 0, 0, 0};
+	anglesToSteps(targetAngles, positions);
+
+	multi.moveTo(positions);
+	multi.runSpeedToPosition();
+
+	delay(1000);
+
+	float targetAngles2[NUM_STEPPERS] = {30, -45, 60, -30, 15, 90};
+	anglesToSteps(targetAngles2, positions);
+
+	multi.moveTo(positions);
+	multi.runSpeedToPosition();
+
+	delay(1000);
+
+	// // manual synchronization, but smoother movement
+	// for (int i = 0; i < NUM_STEPPERS; i++) {
+	// 	steppersList[i].moveTo(positions[i]);
 	// }
 
-	long positions[2];
-	positions[0] = STEPTOANGLE * 360; // gives two total rotations
-	positions[1] = STEPTOANGLE * 720; // gives 4 total rotations
-
-	steppers.moveTo(positions);
-	steppers.runSpeedToPosition();
-
-	delay(1000);
-	positions[0] = -STEPTOANGLE * 360;
-	positions[1] = -STEPTOANGLE * 720;
-
-	steppers.moveTo(positions);
-	steppers.runSpeedToPosition();
-
-	delay(1000);
+	// bool running = true;
+	// while (running) {
+	// 	running = false;
+	// 	for (int i = 0; i < NUM_STEPPERS; i++) {
+	// 		if (steppersList[i].distanceToGo() != 0) {
+	// 			steppersList[i].run();
+	// 			running = true;
+	// 		}
+	// 	}
+	// }
 }
+
+
+
+
+
+
 
 // put function definitions here:
 // void serialParse(int &step_count) {
