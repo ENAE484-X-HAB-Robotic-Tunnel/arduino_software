@@ -3,8 +3,10 @@
 #include <MultiStepper.h>
 
 #define NUM_STEPPERS 6
-#define STEPTOANGLE 5.55555 // 200 steps, 10x1 reduction -> 2000 effective steps; 5.5555 effective steps per degree
+// #define STEPTOANGLE 5.55555 // 200 steps, 10x1 reduction -> 2000 effective steps; 5.5555 effective steps per degree
+#define STEPTOANGLE 11.1111 // 200 steps, 20x1 reduction -> 4000 effective steps; 11.11 effective steps per degree
 
+// STEP = PUL, DIR = DIR
 const int stepPins[NUM_STEPPERS] = {11, 5, -1, -1, -1, -1}; // FILL ME IN !!!!!
 const int dirPins[NUM_STEPPERS]  = {13, 7, -1, -1, -1, -1}; // FILL ME IN !!!!!
 
@@ -46,6 +48,9 @@ void setup() {
 void loop() {
 
 	// Possibly jerkey - No acc/dec
+	/* Possibly handled by stepper driver CL, Tune PK, PD, PD with dial on driver
+	 * Make sure to keep dial on lowest current setting, 2A, !!!already over current!!!
+	*/
 	float targetAngles[NUM_STEPPERS] = {0, 0, 0, 0, 0, 0};
 	anglesToSteps(targetAngles, positions);
 
