@@ -7,8 +7,15 @@
 #define STEPTOANGLE 11.1111 // 200 steps, 20x1 reduction -> 4000 effective steps; 11.11 effective steps per degree
 
 // STEP = PUL, DIR = DIR
-const int stepPins[NUM_STEPPERS] = {11, 5, -1, -1, -1, -1}; // FILL ME IN !!!!!
-const int dirPins[NUM_STEPPERS]  = {13, 7, -1, -1, -1, -1}; // FILL ME IN !!!!!
+const int stepPins[NUM_STEPPERS] = {10, 13, 7, 38, 52, 4}; // FILL ME IN !!!!!
+const int dirPins[NUM_STEPPERS]  = {9, 12, 6, 34, 50, 3}; // FILL ME IN !!!!!
+
+/*
+ * PINS:
+ * PULL : 10 | 13 | 7 | 38 | 52 | 4
+ * DIR  : 9  | 12 | 6 | 34 | 50 | 3
+ * 
+*/
 
 AccelStepper steppersList[NUM_STEPPERS] = {
   AccelStepper(AccelStepper::DRIVER, stepPins[0], dirPins[0]),
@@ -16,7 +23,7 @@ AccelStepper steppersList[NUM_STEPPERS] = {
   AccelStepper(AccelStepper::DRIVER, stepPins[2], dirPins[2]),
   AccelStepper(AccelStepper::DRIVER, stepPins[3], dirPins[3]),
   AccelStepper(AccelStepper::DRIVER, stepPins[4], dirPins[4]),
-  AccelStepper(AccelStepper::DRIVER, stepPins[5], dirPins[5])
+  AccelStepper(AccelStepper::DRIVER, stepPins[5], dirPins[5]),
 };
 
 MultiStepper multi;
@@ -59,7 +66,8 @@ void loop() {
 
 	delay(1000);
 
-	float targetAngles2[NUM_STEPPERS] = {30, -45, 60, -30, 15, 90};
+	// float targetAngles2[NUM_STEPPERS] = {30, -45, 60, -30, 15, 90};
+	float targetAngles2[NUM_STEPPERS] = {30, 30, 30, 30, 30, 30};
 	anglesToSteps(targetAngles2, positions);
 
 	multi.moveTo(positions);
