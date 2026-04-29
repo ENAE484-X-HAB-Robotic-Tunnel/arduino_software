@@ -2,22 +2,21 @@
 #include <AccelStepper.h>
 #include <MultiStepper.h>
 
-#define NUM_STEPPERS 6
-// #define STEPTOANGLE 5.55555 // 200 steps, 10x1 reduction -> 2000 effective steps; 5.5555 effective steps per degree
-#define STEPTOANGLE 11.1111 // 200 steps, 20x1 reduction -> 4000 effective steps; 11.11 effective steps per degree
+#define numLegs 6
+#define numSteppers numLegs
+#define angleToSteps 11.1111 // 200 steps, 20x1 reduction -> 4000 effective steps; 11.11 effective steps per degree
+#define lengthToAngle 360*(1000/31.1) // 31.1mm spool circumference
+#define stepsPerMeter angleToSteps*lengthToAngle
+// NOTES: RADIUS?, 
+
+enum Mode { CONTROL, CALIBRATION };
+Mode mode = CALIBRATION;
 
 // STEP = PUL, DIR = DIR
-const int stepPins[NUM_STEPPERS] = {10, 13, 7, 38, 52, 4}; // FILL ME IN !!!!!
-const int dirPins[NUM_STEPPERS]  = {9, 12, 6, 34, 50, 3}; // FILL ME IN !!!!!
+const int stepPins[numSteppers] = {10, 13, 7, 38, 52, 4};
+const int dirPins[numSteppers]  = {9,  12, 6, 34, 50, 3};
 
-/*
- * PINS:
- * PULL : 10 | 13 | 7 | 38 | 52 | 4
- * DIR  : 9  | 12 | 6 | 34 | 50 | 3
- * 
-*/
-
-AccelStepper steppersList[NUM_STEPPERS] = {
+AccelStepper steppersList[numSteppers] = {
   AccelStepper(AccelStepper::DRIVER, stepPins[0], dirPins[0]),
   AccelStepper(AccelStepper::DRIVER, stepPins[1], dirPins[1]),
   AccelStepper(AccelStepper::DRIVER, stepPins[2], dirPins[2]),
@@ -28,70 +27,102 @@ AccelStepper steppersList[NUM_STEPPERS] = {
 
 MultiStepper multi;
 
-long positions[NUM_STEPPERS];
-void anglesToSteps(float angles[], long positions[]) {
-  for (int i = 0; i < NUM_STEPPERS; i++) {
-    positions[i] = angles[i] * STEPTOANGLE;
-	// positions[i] = steppersList[i].currentPosition() + angles[i] * STEPTOANGLE; // Relative Motion ---
-  }
-}
+double l_legs[numSteppers];
+float l_legs_init[numLegs] = {0.45, 0.45, 0.45, 0.45 ,0.45 ,0.45}; // Calibrate zero position
+long positions[numSteppers];
 
-// uint32_t startTime;
-// uint32_t curTime;
-// uint8_t stopped = 0;
-
+String inputBuffer = "";
+void parseInput(String msg);
 
 void setup() {
 	Serial.begin(115200);
 
-	for (int i = 0; i < NUM_STEPPERS; i++) {
+	for (int i = 0; i < numSteppers; i++) {
 		steppersList[i].setMaxSpeed(500);
 		multi.addStepper(steppersList[i]);
 	}
+}
 
-	// startTime = millis();
+void readSerial() {
+    while (Serial.available()) {
+        char c = Serial.read();
+
+        if (c == '\n') {
+            parseInput(inputBuffer);
+            inputBuffer = "";
+        }
+        else if (c != '\r') {
+            inputBuffer += c;
+        }
+    }
+}
+
+void parseInput(String msg) {
+
+    char buffer[100];
+    msg.toCharArray(buffer, sizeof(buffer));
+
+    int index = 0;
+    char *token = strtok(buffer, ",");
+
+    while (token != NULL && index < numSteppers) {
+        l_legs[index] = atof(token);
+        token = strtok(NULL, ",");
+        index++;
+    }
+
+    if (index != numSteppers) {
+        Serial.println("Parse error");
+        return;
+    }
+
+    for (int i = 0; i < numSteppers; i++) {
+        float delta = l_legs[i] - l_legs_init[i];
+
+        if (mode == CONTROL) positions[i] = (long) (delta * stepsPerMeter);
+        // else positions[i] = (l_legs[i]) * stepsPerMeter;
+        else positions[i] = (long) (delta * stepsPerMeter);
+        Serial.println(positions[i], 4);
+
+    }
+	
+	Serial.print("(Arduino) Delta Lengths: ");
+	for (int i = 0; i < numSteppers; i++) {
+		Serial.print(l_legs[i] - l_legs_init[i], 4);
+		if (i < numSteppers - 1) Serial.print(", ");
+	}
+	Serial.println();
+
+	Serial.print("(Arduino) Steps       :");
+	for (int i = 0; i < numSteppers; i++) {
+		Serial.print(positions[i], 4);
+		if (i < numSteppers - 1) Serial.print(", ");
+	}
+	Serial.println();
+
+    // multi.moveTo(positions);
+    // multi.runSpeedToPosition();
+
+    // Serial.println("(Arduino) Done");
+    // Serial.println(delta);
 }
 
 void loop() {
+    if (mode == CONTROL) readSerial();
+    else {
+        while (Serial.available()) {
+            char c = Serial.read();
 
-	// Possibly jerkey - No acc/dec
-	/* Possibly handled by stepper driver CL, Tune PK, PD, PD with dial on driver
-	 * Make sure to keep dial on lowest current setting, 2A, !!!already over current!!!
-	*/
-	float targetAngles[NUM_STEPPERS] = {0, 0, 0, 0, 0, 0};
-	anglesToSteps(targetAngles, positions);
-
-	multi.moveTo(positions);
-	multi.runSpeedToPosition();
-
-	delay(1000);
-
-	// float targetAngles2[NUM_STEPPERS] = {30, -45, 60, -30, 15, 90};
-	float targetAngles2[NUM_STEPPERS] = {30, 30, 30, 30, 30, 30};
-	anglesToSteps(targetAngles2, positions);
-
-	multi.moveTo(positions);
-	multi.runSpeedToPosition();
-
-	delay(1000);
-
-	// // manual synchronization, but smoother movement
-	// for (int i = 0; i < NUM_STEPPERS; i++) {
-	// 	steppersList[i].moveTo(positions[i]);
-	// }
-
-	// bool running = true;
-	// while (running) {
-	// 	running = false;
-	// 	for (int i = 0; i < NUM_STEPPERS; i++) {
-	// 		if (steppersList[i].distanceToGo() != 0) {
-	// 			steppersList[i].run();
-	// 			running = true;
-	// 		}
-	// 	}
-	// }
+            if (c == '\n') {
+            parseInput(inputBuffer);
+            inputBuffer = "";
+            }
+            else if (c != '\r') {
+            inputBuffer += c;
+            }
+        }
+    }
 }
-
 
 
 
