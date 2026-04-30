@@ -8,10 +8,10 @@ const float lengthToAngle = 360*(1000.0/31.1); // 31.1mm spool circumference
 const float stepsPerMeter = angleToSteps*lengthToAngle;
 
 enum Mode { CONTROL, MANUAL };
-// Mode mode = CONTROL;
-Mode mode = MANUAL;
+Mode mode = CONTROL;
+// Mode mode = MANUAL;
 
-const bool disableMovement = true;
+const bool disableMovement = false;
 
 // STEP = PUL, DIR = DIR
 const int stepPins[numLegs] = {10, 13, 7, 38, 52, 4};
@@ -44,7 +44,8 @@ void setup() {
     }
 
 	for (int i = 0; i < numLegs; i++) {
-		steppersList[i].setMaxSpeed(500);
+		// steppersList[i].setMaxSpeed(4000);
+        steppersList[i].setMaxSpeed(500);
 		multi.addStepper(steppersList[i]);
 	}
 }
