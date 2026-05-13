@@ -29,7 +29,7 @@ AccelStepper steppersList[numLegs] = {
 MultiStepper multi;
 
 float l_legs[numLegs];
-float l_init[numLegs] = {0.5, 0.5, 0.5, 0.5, 0.5, 0.5}; // Calibrate zero position
+float l_init[numLegs] = {0.508, 0.508, 0.508, 0.508, 0.508, 0.508}; // Calibrate zero position
 float l_input[numLegs];
 long positions[numLegs];
 
@@ -44,7 +44,7 @@ void setup() {
     }
 
 	for (int i = 0; i < numLegs; i++) {
-		// steppersList[i].setMaxSpeed(4000);
+		// steppersList[i].setMaxSpeed(3000);
         steppersList[i].setMaxSpeed(500);
 		multi.addStepper(steppersList[i]);
 	}
